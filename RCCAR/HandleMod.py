@@ -3,17 +3,18 @@ from time import sleep
 from RCStatic import *
     
 class Handle :
-    shift = SHIFT_STOP
-    steer = STEER_NOLRDIR
-    horn = HORN_OFF
     
     def __init__(self) :
-        global wii, buttons
+        self.shift = SHIFT_STOP
+        self.steer = STEER_NOLRDIR
+        self.horn = HORN_OFF
+        self.isQuit = 0
+        
         print("Press Wiimote 1 + 2 Buttons to Connection")
         sleep(1)
         
         try :
-            wii = c.Wiimote()
+            self.wii = c.Wiimote()
         except RuntimeError :
             print("Failed to Connect Wiimote")
             quit()
@@ -21,20 +22,18 @@ class Handle :
         print("Quit to Press Buttons + and -")
         sleep(2)
         
-        wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
-
+        self.wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
+    
     def wii_quit(self) :
         global wii
+        print("Wiimote Power Off")
+        self.wii.rumble = 1
+        sleep(1)
+        self.wii.rumble = 0
+        exit(self.wii)
 
-        printf("Wiimote Power Off")
-        wii.rumble = 1
-        time.sleep(1)
-        wii.rumble = 0
-        exit(wii)
-    
     def setShift(self) :
-        global wii
-        buttons = wii.state["buttons"]
+        buttons = self.wii.state["buttons"]
 
         if(buttons & c.BTN_2 and buttons & c.BTN_1) :
             shift = SHIFT_STOP
@@ -48,8 +47,7 @@ class Handle :
         return shift
     
     def setSteer(self) :
-        global wii
-        steerVal = wii.state["acc"][1]
+        steerVal = self.wii.state["acc"][1]
         
         if(steerVal >= STEER_LEFTLIMIT) :
             steer = STEER_LEFTLIMIT
@@ -61,21 +59,31 @@ class Handle :
         return steer
     
     def setHorn(self) :
-        global wii
-        buttons = wii.state["buttons"]
+        buttons = self.wii.state["buttons"]
         
-        if((buttons & c.BTN_A) == 0) :
-            horn = HORN_OFF
-        elif(buttons & c.BTN_A) :
+        if(buttons & c.BTN_A) :
             horn = HORN_ON
+        elif(buttons & c.BTN_1) :
+            horn = SHIFT_BACKWARD
+        else :
+            horn = HORN_OFF
 
         return horn
+    
+    def setQuit(self) :
+        buttons = self.wii.state["buttons"]
         
+        if(buttons & c.BTN_PLUS and buttons & c.BTN_MINUS) :
+            isQuit = 1
+        else :
+            isQuit = 0
+            
+        return isQuit
+            
     def getHandleCon(self) :
-        global shift, steer, horn
-        
         shift = self.setShift()
         steer = self.setSteer()
         horn = self.setHorn()
+        isQuit = self.setQuit()
+        return shift, steer, horn, isQuit
 
-        return shift, steer, horn
