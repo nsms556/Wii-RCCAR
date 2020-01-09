@@ -151,19 +151,19 @@ def RCCon() :
 	if(shift == SHIFT_FORWARD) :
 	    setMotorForward()
 	    if(speed + 0.2 <= SPEED_LIMIT) :
-            speed += 0.2
+            	speed += 0.2
 	    setMotorSpeed(speed)
 	elif(shift == SHIFT_BACKWARD) :
 	    setMotorBackward()
 	    if(speed + 0.2 <= SPEED_LIMIT) :
-            speed += 0.2
+            	speed += 0.2
 	    setMotorSpeed(speed)
 	else :
-        if(speed - 1.5 < 0) :
-            speed = 0
+            if(speed - 1.5 < 0) :
+        	speed = 0
 	    else :
-		    speed -= 1.5
-        setMotorSpeed(speed)
+		speed -= 1.5
+            setMotorSpeed(speed)
 	    
 	setServoSteer(steer)
 	
