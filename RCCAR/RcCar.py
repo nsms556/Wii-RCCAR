@@ -43,7 +43,7 @@ def setServoSteer(steer) :
 	servo.ChangeDutyCycle(valConvert(steer))
 	
 def init() :
-	global servo, dcMotor, piezo, HandleCon, speed
+	global servo, dcMotor, HandleCon, speed
 	
 	GPIO.setwarnings(False)
 	GPIO.setmode(GPIO.BCM)
