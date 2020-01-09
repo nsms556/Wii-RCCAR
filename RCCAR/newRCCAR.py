@@ -18,7 +18,7 @@ def initWiimote() :
 
     wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
     
-    print "Quit to Press Buttons + and -"
+    print("Quit to Press Buttons + and -")
     sleep(3)
 
 def initRC() :
@@ -39,13 +39,13 @@ def initRC() :
 
 def valConvert(inVal) :
     if(inVal >= 117 and inVal <= 123) :
-	val = 8
+	    val = 8
     else :
-	val = round((float(200 - inVal) / 10), 1)
-	if(val <= 5) :
-	    val = 5
-	elif(val >= 10.5) :
-	    val = 10.5
+	    val = round((float(200 - inVal) / 10), 1)
+	    if(val <= 5) :
+	        val = 5
+	    elif(val >= 10.5) :
+	        val = 10.5
     
     return val
 
@@ -144,30 +144,30 @@ def RCCon() :
         horn = setHorn()
         isQuit = setQuit()
 		
-	if(isQuit == 1) :
-	    wii_quit()
-	    break
+        if(isQuit == 1) :
+            wii_quit()
+            break
 
-	if(shift == SHIFT_FORWARD) :
-	    setMotorForward()
-	    if(speed + 0.2 <= SPEED_LIMIT) :
-            speed += 0.2
-	    setMotorSpeed(speed)
-	elif(shift == SHIFT_BACKWARD) :
-	    setMotorBackward()
-	    if(speed + 0.2 <= SPEED_LIMIT) :
-            speed += 0.2
-	    setMotorSpeed(speed)
-	else :
-        if(speed - 1.5 < 0) :
-            speed = 0
-	    else :
-            speed -= 1.5
-        setMotorSpeed(speed)
-	    
-	setServoSteer(steer)
-	
-	sleep(RCStatic.BUTTON_DELAY)
+        if(shift == SHIFT_FORWARD) :
+            setMotorForward()
+            if(speed + 0.2 <= SPEED_LIMIT) :
+                speed += 0.2
+            setMotorSpeed(speed)
+        elif(shift == SHIFT_BACKWARD) :
+            setMotorBackward()
+            if(speed + 0.2 <= SPEED_LIMIT) :
+                speed += 0.2
+            setMotorSpeed(speed)
+        else :
+            if(speed - 1.5 < 0) :
+                speed = 0
+            else :
+                speed -= 1.5
+            setMotorSpeed(speed)
+
+        setServoSteer(steer)
+           
+        sleep(RCStatic.BUTTON_DELAY)
 
 def main(self) :
 
