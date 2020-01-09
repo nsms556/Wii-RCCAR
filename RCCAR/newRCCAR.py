@@ -13,7 +13,7 @@ def initWiimote() :
     try :
         wii = c.Wiimote()
     except RuntimeError :
-        print "Wiimote Failed"
+        print("Wiimote Failed")
         quit()
 
     wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
