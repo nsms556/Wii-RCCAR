@@ -7,7 +7,7 @@ import RPi.GPIO as GPIO
 def initWiimote() :
     global wii
     
-    print "Press Wiimote 1 + 2 Button to Connection"
+    print("Press Wiimote 1 + 2 Button to Connection")
     sleep(1)
 
     try :
@@ -139,7 +139,7 @@ def RCCon() :
     speed = 0
 
     while True :
-	shift = setShift()
+	    shift = setShift()
         steer = setSteer()
         horn = setHorn()
         isQuit = setQuit()
@@ -151,19 +151,19 @@ def RCCon() :
 	if(shift == SHIFT_FORWARD) :
 	    setMotorForward()
 	    if(speed + 0.2 <= SPEED_LIMIT) :
-            	speed += 0.2
+            speed += 0.2
 	    setMotorSpeed(speed)
 	elif(shift == SHIFT_BACKWARD) :
 	    setMotorBackward()
 	    if(speed + 0.2 <= SPEED_LIMIT) :
-            	speed += 0.2
+            speed += 0.2
 	    setMotorSpeed(speed)
 	else :
-            if(speed - 1.5 < 0) :
-        	speed = 0
+        if(speed - 1.5 < 0) :
+            speed = 0
 	    else :
-		speed -= 1.5
-            setMotorSpeed(speed)
+            speed -= 1.5
+        setMotorSpeed(speed)
 	    
 	setServoSteer(steer)
 	
