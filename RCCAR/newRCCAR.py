@@ -139,7 +139,7 @@ def RCCon() :
     speed = 0
 
     while True :
-	    shift = setShift()
+        shift = setShift()
         steer = setSteer()
         horn = setHorn()
         isQuit = setQuit()
