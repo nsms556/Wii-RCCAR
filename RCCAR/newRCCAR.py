@@ -4,51 +4,66 @@ from RCStatic import *
 import RCStatic
 import RPi.GPIO as GPIO
 
-def initWiimote(self) :
+def initWiimote() :
+    global wii
+    
     print "Press Wiimote 1 + 2 Button to Connection"
     sleep(1)
 
     try :
-        self.wii = c.Wiimote()
+        wii = c.Wiimote()
     except RuntimeError :
         print "Wiimote Failed"
         quit()
 
-    self.wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
+    wii.rpt_mode = c.RPT_BTN | c.RPT_ACC
     
     print "Quit to Press Buttons + and -"
     sleep(3)
 
-def initRC(self) :
+def initRC() :
     global servo, dcMotor
 
     GPIO.setwarnings(False)
-	GPIO.setmode(GPIO.BCM)
+    GPIO.setmode(GPIO.BCM)
 
-	GPIO.setup(RCStatic.MOTOR_DIR, GPIO.OUT)
-	GPIO.setup(RCStatic.MOTOR_PWM, GPIO.OUT)	
-	GPIO.setup(RCStatic.SERVO, GPIO.OUT)
+    GPIO.setup(RCStatic.MOTOR_DIR, GPIO.OUT)
+    GPIO.setup(RCStatic.MOTOR_PWM, GPIO.OUT)	
+    GPIO.setup(RCStatic.SERVO, GPIO.OUT)
 	
-	servo = GPIO.PWM(RCStatic.SERVO, 50)
-	dcMotor = GPIO.PWM(RCStatic.MOTOR_PWM, 100)
+    servo = GPIO.PWM(RCStatic.SERVO, 50)
+    dcMotor = GPIO.PWM(RCStatic.MOTOR_PWM, 100)
 	
-	servo.start(0)
-	dcMotor.start(0)
+    servo.start(0)
+    dcMotor.start(0)
+
+def valConvert(inVal) :
+    if(inVal >= 117 and inVal <= 123) :
+	val = 8
+    else :
+	val = round((float(200 - inVal) / 10), 1)
+	if(val <= 5) :
+	    val = 5
+	elif(val >= 10.5) :
+	    val = 10.5
+    
+    return val
 
 def servoTest() :
     global servo
 
     servo.ChangeDutyCycle(5)
-	sleep(1)
-
-	servo.ChangeDutyCycle(10)
-	sleep(1)
+    sleep(1)
+    
+    servo.ChangeDutyCycle(10)
+    sleep(1)
 	
-	servo.ChangeDutyCycle(8)
-	sleep(1)
+    servo.ChangeDutyCycle(8)
+    sleep(1)
 
-def setShift(self):
-    buttons = self.wii.state["buttons"]
+def setShift():
+    global wii
+    buttons = wii.state["buttons"]
 
     if(buttons & c.BTN_2 and buttons & c.BTN_1):
         shift = SHIFT_STOP
@@ -61,8 +76,9 @@ def setShift(self):
 
     return shift
 
-def setSteer(self):
-    steerVal = self.wii.state["acc"][1]
+def setSteer():
+    global wii
+    steerVal = wii.state["acc"][1]
 
     if(steerVal >= STEER_LEFTLIMIT):
         steer = STEER_LEFTLIMIT
@@ -73,8 +89,9 @@ def setSteer(self):
 
     return steer
 
-def setHorn(self):
-    buttons = self.wii.state["buttons"]
+def setHorn():
+    global wii
+    buttons = wii.state["buttons"]
 
     if(buttons & c.BTN_A):
         horn = HORN_ON
@@ -85,8 +102,9 @@ def setHorn(self):
 
     return horn
 
-def setQuit(self) :
-    buttons = self.wii.state["buttons"]
+def setQuit() :
+    global wii
+    buttons = wii.state["buttons"]
 
     if(buttons & c.BTN_PLUS and buttons & c.BTN_MINUS) :
         isQuit = 1
@@ -95,64 +113,71 @@ def setQuit(self) :
 
     return isQuit
 
-def wii_quit(self) :
+def wii_quit() :
     global wii
 
     print("Wiimote Power Off")
-    self.wii.rumble = 1
+    wii.rumble = 1
     sleep(1)
-    self.wii.rumble = 0
-    exit(self.wii)
+    wii.rumble = 0
+    exit(wii)
 
 def setMotorForward() :
-	GPIO.output(RCStatic.MOTOR_DIR, True)
+    GPIO.output(RCStatic.MOTOR_DIR, True)
 
-def setMotorBackward(speed) :
-	GPIO.output(RCStatic.MOTOR_DIR, False)
+def setMotorBackward() :
+    GPIO.output(RCStatic.MOTOR_DIR, False)
 
 def setMotorSpeed(speedValue) :
-    dcMotor.ChangeDutyCycle(speed)
-
-def setMotorStop(speed) :
-	dcMotor.ChangeDutyCycle(speed)
+    dcMotor.ChangeDutyCycle(speedValue)
 
 def setServoSteer(steer) :
-	servo.ChangeDutyCycle(valConvert(steer))
+    servo.ChangeDutyCycle(valConvert(steer))
 
-def __init__(self) :
+def RCCon() :
+
+    speed = 0
+
+    while True :
+	shift = setShift()
+        steer = setSteer()
+        horn = setHorn()
+        isQuit = setQuit()
+		
+	if(isQuit == 1) :
+	    wii_quit()
+	    break
+
+	if(shift == SHIFT_FORWARD) :
+	    setMotorForward()
+	    if(speed + 0.2 <= SPEED_LIMIT) :
+		speed += 0.2
+	    setMotorSpeed(speed)
+	elif(shift == SHIFT_BACKWARD) :
+	    setMotorBackward()
+	    if(speed + 0.2 <= SPEED_LIMIT) :
+		speed += 0.2
+	    setMotorSpeed(speed)
+	else :
+            if(speed - 1.5 < 0) :
+                speed = 0
+	    else :
+		speed -= 1.5
+            setMotorSpeed(speed)
+	    
+	setServoSteer(steer)
+	
+	sleep(RCStatic.BUTTON_DELAY)
+
+def main(self) :
 
     initRC()
     initWiimote()
 
     servoTest()
+    
+    RCCon()
 
-def __main__(self) :
-
-    speed = 0
-
-    while True :
-		shift = setShift()
-        steer = setSteer()
-        horn = setHorn()
-        isQuit = setQuit()
-		
-		if(isQuit == 1) :
-			wii_quit()
-			break
-
-        if(shift == SHIFT_STOP) :
-            if(speed - 1.5 < 0) :
-                speed = 0
-            setMotorSpeed(speed)
-		elif(shift == SHIFT_FORWARD) :
-			setMotorForward(speed)
-		elif(shift == SHIFT_BACKWARD) :
-			setMotorBackward(speed)
-
-        if(speed + 0.2 <= SPEED_LIMIT) :
-			speed += 0.2
-        
-        setMotorSpeed(speed)
-		setServoSteer(steer)
-	
-		sleep(RCStatic.BUTTON_DELAY)
+if __name__ == '__main__':
+    import sys
+    sys.exit(main(sys.argv))
