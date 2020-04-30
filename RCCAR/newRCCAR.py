@@ -1,7 +1,6 @@
 import cwiid as c
 from time import sleep
 from RCStatic import *
-import RCStatic
 import RPi.GPIO as GPIO
 
 def initWiimote() :
@@ -27,12 +26,13 @@ def initRC() :
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
 
-    GPIO.setup(RCStatic.MOTOR_DIR, GPIO.OUT)
-    GPIO.setup(RCStatic.MOTOR_PWM, GPIO.OUT)	
-    GPIO.setup(RCStatic.SERVO, GPIO.OUT)
+    GPIO.setup(MOTOR_DIR, GPIO.OUT)
+    GPIO.setup(MOTOR_PWM, GPIO.OUT)	
+    GPIO.setup(SERVO, GPIO.OUT)
+    GPIO.setup(HEADLIGHT, GPIO.OUT)
 	
-    servo = GPIO.PWM(RCStatic.SERVO, 50)
-    dcMotor = GPIO.PWM(RCStatic.MOTOR_PWM, 100)
+    servo = GPIO.PWM(SERVO, 50)
+    dcMotor = GPIO.PWM(MOTOR_PWM, 100)
 	
     servo.start(0)
     dcMotor.start(0)
@@ -60,6 +60,20 @@ def servoTest() :
 	
     servo.ChangeDutyCycle(8)
     sleep(1)
+
+def setLight(light) :
+    global wii
+    buttons = wii.state['buttons']
+
+    if( buttons & c.BTN_DOWN ) :
+        if(light == LED_ON) :
+            retLight = LED_OFF
+        else :
+            retLight = LED_ON
+    else :
+        retLight = light
+
+    return retLight
 
 def setShift():
     global wii
@@ -89,19 +103,6 @@ def setSteer():
 
     return steer
 
-def setHorn():
-    global wii
-    buttons = wii.state["buttons"]
-
-    if(buttons & c.BTN_A):
-        horn = HORN_ON
-    elif(buttons & c.BTN_1):
-        horn = SHIFT_BACKWARD
-    else:
-        horn = HORN_OFF
-
-    return horn
-
 def setQuit() :
     global wii
     buttons = wii.state["buttons"]
@@ -122,11 +123,17 @@ def wii_quit() :
     wii.rumble = 0
     exit(wii)
 
+def setHeadLight(status) :
+    if(status == LED_ON) :
+        GPIO.output(HEADLIGHT, True)
+    else :
+        GPIO.output(HEADLIGHT, False)
+
 def setMotorForward() :
-    GPIO.output(RCStatic.MOTOR_DIR, True)
+    GPIO.output(MOTOR_DIR, True)
 
 def setMotorBackward() :
-    GPIO.output(RCStatic.MOTOR_DIR, False)
+    GPIO.output(MOTOR_DIR, False)
 
 def setMotorSpeed(speedValue) :
     dcMotor.ChangeDutyCycle(speedValue)
@@ -137,12 +144,13 @@ def setServoSteer(steer) :
 def RCCon() :
 
     speed = 0
+    headlight = LED_OFF
 
     while True :
         shift = setShift()
         steer = setSteer()
-        horn = setHorn()
         isQuit = setQuit()
+        headlight = setLight(headlight)
 		
         if(isQuit == 1) :
             wii_quit()
@@ -166,8 +174,10 @@ def RCCon() :
             setMotorSpeed(speed)
 
         setServoSteer(steer)
-           
-        sleep(RCStatic.BUTTON_DELAY)
+        
+        setHeadLight(headlight)
+
+        sleep(BUTTON_DELAY)
 
 def main(self) :
 
