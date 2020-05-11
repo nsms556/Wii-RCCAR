@@ -1,5 +1,5 @@
 import cwiid as c
-from time import sleep
+from time import sleep, time
 from RCStatic import *
 import RPi.GPIO as GPIO
 
@@ -61,19 +61,23 @@ def servoTest() :
     servo.ChangeDutyCycle(8)
     sleep(1)
 
-def setLight(light) :
+def setLight(light, lastLightTime) :
     global wii
     buttons = wii.state['buttons']
-
+    
     if( buttons & c.BTN_DOWN ) :
-        if(light == LED_ON) :
-            retLight = LED_OFF
-        else :
-            retLight = LED_ON
+	nowTime = time()
+	if nowTime - lastLightTime > HEADLIGHT_IGNORE :
+	    newLight = light ^ True
+	    newLightTime = time()
+	else :
+	    newLight = light
+	    newLightTime = lastLightTime
     else :
-        retLight = light
+	newLight = light
+	newLightTime = lastLightTime
 
-    return retLight
+    return newLight, newLightTime
 
 def setShift():
     global wii
@@ -119,7 +123,7 @@ def wii_quit() :
 
     print("Wiimote Power Off")
     wii.rumble = 1
-    sleep(1)
+    sleep(0.5)
     wii.rumble = 0
     exit(wii)
 
@@ -145,12 +149,13 @@ def RCCon() :
 
     speed = 0
     headlight = LED_OFF
-
+    timeHL = time()
+    
     while True :
         shift = setShift()
         steer = setSteer()
         isQuit = setQuit()
-        headlight = setLight(headlight)
+        headlight, timeHL = setLight(headlight, timeHL)
 		
         if(isQuit == 1) :
             wii_quit()
@@ -160,22 +165,19 @@ def RCCon() :
             setMotorForward()
             if(speed + 0.2 <= SPEED_LIMIT) :
                 speed += 0.2
-            setMotorSpeed(speed)
         elif(shift == SHIFT_BACKWARD) :
             setMotorBackward()
             if(speed + 0.2 <= SPEED_LIMIT) :
                 speed += 0.2
-            setMotorSpeed(speed)
         else :
             if(speed - 1.5 < 0) :
                 speed = 0
             else :
                 speed -= 1.5
-            setMotorSpeed(speed)
-
+	    
+	setMotorSpeed(speed)
         setServoSteer(steer)
-        
-        setHeadLight(headlight)
+	setHeadLight(headlight)
 
         sleep(BUTTON_DELAY)
 
