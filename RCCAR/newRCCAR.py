@@ -186,12 +186,12 @@ def RCCon() :
                 speed -= 1.5
             breaklight = LED_ON
 	    
-    setMotorSpeed(speed)
-    setServoSteer(steer)
-	setHeadLight(headlight)
-    setBreakLight(breaklight)
+        setMotorSpeed(speed)
+        setServoSteer(steer)
+        setHeadLight(headlight)
+        setBreakLight(breaklight)
 
-    sleep(BUTTON_DELAY)
+        sleep(BUTTON_DELAY)
 
 def main(self) :
 
