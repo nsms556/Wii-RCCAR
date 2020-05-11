@@ -30,6 +30,7 @@ def initRC() :
     GPIO.setup(MOTOR_PWM, GPIO.OUT)	
     GPIO.setup(SERVO, GPIO.OUT)
     GPIO.setup(HEADLIGHT, GPIO.OUT)
+    GPIO.setup(BREAKLIGHT, GPIO,OUT)
 	
     servo = GPIO.PWM(SERVO, 50)
     dcMotor = GPIO.PWM(MOTOR_PWM, 100)
@@ -66,16 +67,16 @@ def setLight(light, lastLightTime) :
     buttons = wii.state['buttons']
     
     if( buttons & c.BTN_DOWN ) :
-	nowTime = time()
-	if nowTime - lastLightTime > HEADLIGHT_IGNORE :
-	    newLight = light ^ True
-	    newLightTime = time()
-	else :
+	    nowTime = time()
+	    if nowTime - lastLightTime > HEADLIGHT_IGNORE :
+	        newLight = light ^ True
+	        newLightTime = time()
+	    else :
+	        newLight = light
+	        newLightTime = lastLightTime
+    else :
 	    newLight = light
 	    newLightTime = lastLightTime
-    else :
-	newLight = light
-	newLightTime = lastLightTime
 
     return newLight, newLightTime
 
@@ -133,6 +134,12 @@ def setHeadLight(status) :
     else :
         GPIO.output(HEADLIGHT, False)
 
+def setBreakLight(status) :
+    if(status == LED_ON) :
+        GPIO.output(BREAKLIGHT, True)
+    else :
+        GPIO.output(BREAKLIGHT, False)
+
 def setMotorForward() :
     GPIO.output(MOTOR_DIR, True)
 
@@ -150,7 +157,8 @@ def RCCon() :
     speed = 0
     headlight = LED_OFF
     timeHL = time()
-    
+    breaklight = LED_ON
+
     while True :
         shift = setShift()
         steer = setSteer()
@@ -165,21 +173,25 @@ def RCCon() :
             setMotorForward()
             if(speed + 0.2 <= SPEED_LIMIT) :
                 speed += 0.2
+            breaklight = LED_OFF
         elif(shift == SHIFT_BACKWARD) :
             setMotorBackward()
             if(speed + 0.2 <= SPEED_LIMIT) :
                 speed += 0.2
+            breaklight = LED_ON
         else :
             if(speed - 1.5 < 0) :
                 speed = 0
             else :
                 speed -= 1.5
+            breaklight = LED_ON
 	    
-	setMotorSpeed(speed)
-        setServoSteer(steer)
+    setMotorSpeed(speed)
+    setServoSteer(steer)
 	setHeadLight(headlight)
+    setBreakLight(breaklight)
 
-        sleep(BUTTON_DELAY)
+    sleep(BUTTON_DELAY)
 
 def main(self) :
 
