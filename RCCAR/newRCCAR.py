@@ -30,7 +30,7 @@ def initRC() :
     GPIO.setup(MOTOR_PWM, GPIO.OUT)	
     GPIO.setup(SERVO, GPIO.OUT)
     GPIO.setup(HEADLIGHT, GPIO.OUT)
-    GPIO.setup(BREAKLIGHT, GPIO,OUT)
+    GPIO.setup(BREAKLIGHT, GPIO.OUT)
 	
     servo = GPIO.PWM(SERVO, 50)
     dcMotor = GPIO.PWM(MOTOR_PWM, 100)
