@@ -1,16 +1,18 @@
 import cv2
 import numpy as np
 import imutils
+import pytesseract
+from PIL import Image
+import re
 
-template = cv2.imread('./30-2.png')
-threshold = 0.9
+pytesseract.pytesseract.tesseract_cmd = 'D:\School\Tesseract-OCR\\tesseract.exe'
+config = ('-l eng --oem 1 --psm 3')
+template = cv2.imread('./object.png')
 
 def findTemplate(frame, template) :
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     tplCanny = cv2.Canny(tplGray, 50, 200)
     tplH, tplW = tplCanny.shape[:2]
-
-    cv2.imshow('template', tplCanny)
     
     frameGray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     found = None
@@ -35,7 +37,7 @@ def findTemplate(frame, template) :
     (endX, endY) = (int((Mloc[0] + tplW) * r), int((Mloc[1] + tplH) * r))
 
     frame= cv2.rectangle(frame, (startX, startY), (endX, endY), (0,0,255), 2)
-    roi = frame[startY:endY, startX:endX]
+    roi = frame[startY:endY, startX:endX].copy()
 
     return frame, roi
 
@@ -57,10 +59,19 @@ def contourTracking(frame) :
 def signDetectCamera(video) :
     while True :
         s, frame = video.read()
-        frame = cv2.resize(frame, (800,450))
-
+        
         result, roi = findTemplate(frame, template)
 
+        roi = cv2.GaussianBlur(roi, (5,5), 0)
+        roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        roi = cv2.adaptiveThreshold(roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                    cv2.THRESH_BINARY, 11, 2)
+        roiOCR = Image.fromarray(roi)
+        text = pytesseract.image_to_string(roiOCR, config=config)
+
+        print(text)
+        cv2.putText(result, text, (400, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255))
+        
         cv2.imshow('result', result)
         cv2.imshow('roi', roi)
         
@@ -90,12 +101,14 @@ def signDetectVideo(video) :
 cam = cv2.VideoCapture(0)
 vid = cv2.VideoCapture('./road.mp4')
 if cam.isOpened() :
-    cam.set(3, 640)
-    cam.set(4, 360)
+    cam.set(3, 800)
+    cam.set(4, 450)
 
-    signDetectCamera(cam)
-
-    cam.release()
+    try :
+        signDetectCamera(cam)
+    finally :
+        cam.release()
+        
 elif vid.isOpened() :
     signDetectVideo(vid)
 
