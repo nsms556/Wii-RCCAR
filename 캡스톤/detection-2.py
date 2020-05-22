@@ -5,10 +5,12 @@ import pytesseract
 from PIL import Image
 import re
 
-pytesseract.pytesseract.tesseract_cmd = 'D:\School\Tesseract-OCR\\tesseract.exe'
+#pytesseract.pytesseract.tesseract_cmd = 'D:\School\Tesseract-OCR\\tesseract.exe'
+pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR\\tesseract.exe'
 config = ('-l eng --oem 1 --psm 3')
 
 template = cv2.imread('./object.png')
+erodeK = np.ones((3,3), np.uint8)
 
 def findTemplate(frame, template) :
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
@@ -50,47 +52,62 @@ def contourTracking(frame) :
     
     cannyV = cv2.Canny(contV, 50, 200, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    print(contoursV)
-    cv2.imshow('canny', cannyV)
     
-    for cnt in contoursV :
-        (x, y, w, h) = cv2.boundingRect(cnt)
-        print('cnt :', cnt)
-        cv2.rectangle(cont, (x,y), (x+w, y+h),(0,0,255),2)
+    if len(contoursV) != 0 :
+        squareList = []
+        areaList = []
+        for cnt in contoursV:
+            square = cv2.boundingRect(cnt)
+            squareList.append(square)
         
-    #cont = frame[x-10:x+h+10, y-10:y+w+10].copy()
+        for sq in squareList :
+            area = sq[2] * sq[3]
+            areaList.append(area)
 
-    return cont, cannyV
+        npAreaList = np.array(areaList)
+        maxArea = np.argmax(npAreaList)
+
+        (x, y, w, h) = squareList[maxArea]
+
+        stX = int(y - (h / 2))
+        stY = int(x - (w / 2))
+        endX = int((y + h) + (h / 2))
+        endY = int((x + w) + (w / 2))
+        ret = frame[stX:endX, stY:endY].copy()
+    else :
+        ret = None
+
+    return ret
 
 def signDetectCamera(video) :
     while True :
         s, frame = video.read()
-
-        roi, canny = contourTracking(frame)
-
-        '''
-        roiOCR = Image.fromarray(roi)
-        text = pytesseract.image_to_string(roiOCR, config=config)
-
-        print(text)
-        cv2.putText(frame, text, (400, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255))
         
-         
-        result, roi = findTemplate(frame, template)
-        roi = cv2.GaussianBlur(roi, (5,5), 0)
-
-        roiOCR = Image.fromarray(roi)
-        text = pytesseract.image_to_string(roiOCR, config=config)
-
-        print(text)
-        cv2.putText(result, text, (400, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255))
-        '''
+        contourRoi = contourTracking(frame)
         
-        #cv2.imshow('result', result)
-        cv2.imshow('result', frame)
-        cv2.imshow('roi', roi)
-  
+        if contourRoi is not None :
+            if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
+
+                result, roi = findTemplate(contourRoi, template)
+                textY = int(result.shape[0] - 30)
+                textX = int(result.shape[1] / 3)
+
+                roi = cv2.GaussianBlur(roi, (3,3), 0)
+                roiTH = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                _ , roiTH = cv2.threshold(roiTH, 50,255, cv2.THRESH_BINARY)
+                roiTH = cv2.erode(roiTH, erodeK, iterations=1)
+
+                roiOCR = Image.fromarray(roiTH)
+                text = pytesseract.image_to_string(roiOCR, config=config)
+
+                print(text)
+                cv2.putText(result, text, (textX, textY), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
+                
+                cv2.imshow('roi', roiTH)
+                cv2.imshow('result', result)
+
+        cv2.imshow('origin', frame)
+        
         if cv2.waitKey(30) & 0xff == 27 :
             break
 
@@ -117,8 +134,8 @@ def signDetectVideo(video) :
 cam = cv2.VideoCapture(0)
 vid = cv2.VideoCapture('./road.mp4')
 if cam.isOpened() :
-    cam.set(3, 800)
-    cam.set(4, 450)
+    cam.set(3, 640)
+    cam.set(4, 480)
 
     try :
         signDetectCamera(cam)
