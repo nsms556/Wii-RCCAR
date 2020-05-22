@@ -7,6 +7,7 @@ import re
 
 pytesseract.pytesseract.tesseract_cmd = 'D:\School\Tesseract-OCR\\tesseract.exe'
 config = ('-l eng --oem 1 --psm 3')
+
 template = cv2.imread('./object.png')
 
 def findTemplate(frame, template) :
@@ -42,41 +43,56 @@ def findTemplate(frame, template) :
     return frame, roi
 
 def contourTracking(frame) :
-    frameBlur = cv2.GaussianBlur(frame, (5,5), 0)
-    frameYuv = cv2.cvtColor(frameBlur, cv2.COLOR_BGR2YUV)
-    frameY, frameU, frameV = cv2.split(frameYuv)
-    cannyU = cv2.Canny(frameU, 150, 255, apertureSize=3)
-    cannyV = cv2.Canny(frameV, 50, 200, apertureSize=3)
-    contoursU, _ = cv2.findContours(cannyU, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cont = frame.copy()
+    contBlur = cv2.GaussianBlur(cont, (5,5), 0)
+    contYuv = cv2.cvtColor(contBlur, cv2.COLOR_BGR2YUV)
+    _ , _ , contV = cv2.split(contYuv)
+    
+    cannyV = cv2.Canny(contV, 50, 200, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    print(contoursV)
+    cv2.imshow('canny', cannyV)
     
     for cnt in contoursV :
         (x, y, w, h) = cv2.boundingRect(cnt)
-        cv2.rectangle(frame, (x,y), (x+w, y+h),(0,0,255),2)         
+        print('cnt :', cnt)
+        cv2.rectangle(cont, (x,y), (x+w, y+h),(0,0,255),2)
+        
+    #cont = frame[x-10:x+h+10, y-10:y+w+10].copy()
 
-    return frame, cannyV
+    return cont, cannyV
 
 def signDetectCamera(video) :
     while True :
         s, frame = video.read()
-        
-        result, roi = findTemplate(frame, template)
 
+        roi, canny = contourTracking(frame)
+
+        '''
+        roiOCR = Image.fromarray(roi)
+        text = pytesseract.image_to_string(roiOCR, config=config)
+
+        print(text)
+        cv2.putText(frame, text, (400, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255))
+        
+         
+        result, roi = findTemplate(frame, template)
         roi = cv2.GaussianBlur(roi, (5,5), 0)
-        roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        roi = cv2.adaptiveThreshold(roi, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                    cv2.THRESH_BINARY, 11, 2)
+
         roiOCR = Image.fromarray(roi)
         text = pytesseract.image_to_string(roiOCR, config=config)
 
         print(text)
         cv2.putText(result, text, (400, 400), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,255,255))
+        '''
         
-        cv2.imshow('result', result)
+        #cv2.imshow('result', result)
+        cv2.imshow('result', frame)
         cv2.imshow('roi', roi)
-        
+  
         if cv2.waitKey(30) & 0xff == 27 :
-            break;
+            break
 
 def signDetectVideo(video) :
     while True :
@@ -96,7 +112,7 @@ def signDetectVideo(video) :
             cv2.imshow('result', frame)
         
         if cv2.waitKey(int(video.get(cv2.CAP_PROP_FPS))) & 0xff == 27 :
-            break;        
+            break
 
 cam = cv2.VideoCapture(0)
 vid = cv2.VideoCapture('./road.mp4')
