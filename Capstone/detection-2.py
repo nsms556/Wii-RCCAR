@@ -35,7 +35,7 @@ def findTemplate(frame, template) :
         if found is None or Mval > found[0] :
             found = (Mval, Mloc, r)
             
-    (val, Mloc, r) = found
+    (_, Mloc, r) = found
     (startX, startY) = (int(Mloc[0] * r), int(Mloc[1] * r))
     (endX, endY) = (int((Mloc[0] + tplW) * r), int((Mloc[1] + tplH) * r))
 
