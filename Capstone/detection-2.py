@@ -29,32 +29,46 @@ def findTemplate(frame, template) :
 
         frameCanny = cv2.Canny(frameResized, 50, 200)
         result = cv2.matchTemplate(frameCanny, tplCanny, cv2.TM_CCOEFF_NORMED)
-        
+
         (_, Mval, _, Mloc) = cv2.minMaxLoc(result)
 
         if found is None or Mval > found[0] :
             found = (Mval, Mloc, r)
-            
-    (_, Mloc, r) = found
-    (startX, startY) = (int(Mloc[0] * r), int(Mloc[1] * r))
-    (endX, endY) = (int((Mloc[0] + tplW) * r), int((Mloc[1] + tplH) * r))
+    
+    if found is not None :
+        (_, Mloc, r) = found
+        (startX, startY) = (int(Mloc[0] * r), int(Mloc[1] * r))
+        (endX, endY) = (int((Mloc[0] + tplW) * r), int((Mloc[1] + tplH) * r))
 
-    frame= cv2.rectangle(frame, (startX, startY), (endX, endY), (0,0,255), 2)
-    roi = frame[startY:endY, startX:endX].copy()
+        frame = cv2.rectangle(frame, (startX, startY), (endX, endY), (0,0,255), 2)
+        roi = frame[startY:endY, startX:endX].copy()    
+    else :
+        frame = None
+        roi = None
 
     return frame, roi
 
+def getCannyValue(frame, sigma = 0.23) :
+    median = np.median(frame)
+
+    lower = int(max(0, (1.0 - sigma) * median))
+
+    upper = int(min(255, (1.0 + sigma) * median))
+
+    return lower, upper
+
 def contourTracking(frame) :
     cont = frame.copy()
-    contBlur = cv2.GaussianBlur(cont, (5,5), 0)
-    contYuv = cv2.cvtColor(contBlur, cv2.COLOR_BGR2YUV)
-    _ , _ , contV = cv2.split(contYuv)
+    cont = cv2.GaussianBlur(cont, (5,5), 0)
+    cont = cv2.cvtColor(cont, cv2.COLOR_BGR2YUV)
+    _ , _ , contV = cv2.split(cont)
     
-    cannyV = cv2.Canny(contV, 50, 255, apertureSize=3)
+    low, high = getCannyValue(frame)
+
+    cannyV = cv2.Canny(contV, low, high, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
-    cv2.imshow('splitV', contV)
-    cv2.imshow('canny', cannyV)
+    cv2.imshow('c', cannyV)
 
     if len(contoursV) != 0 :
         squareList = []
@@ -82,6 +96,22 @@ def contourTracking(frame) :
 
     return ret
 
+def preProcessToOCR(roi) :
+    roi = cv2.GaussianBlur(roi, (3,3), 0)
+    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    _ , roi = cv2.threshold(roi, 50,255, cv2.THRESH_BINARY)
+    roi = cv2.erode(roi, erodeK, iterations=1)
+
+    return roi
+
+def findCharacter(ocrImage) :
+    roiOCR = Image.fromarray(ocrImage)
+    text = pytesseract.image_to_string(roiOCR, config=config)
+
+    print(text)
+
+    return text
+   
 def signDetectCamera(video) :
     while True :
         s, frame = video.read()
@@ -90,52 +120,26 @@ def signDetectCamera(video) :
         
         if contourRoi is not None :
             if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
-
                 result, roi = findTemplate(contourRoi, template)
-                textY = int(result.shape[0] - 30)
-                textX = int(result.shape[1] / 3)
 
-                roi = cv2.GaussianBlur(roi, (3,3), 0)
-                roiTH = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-                _ , roiTH = cv2.threshold(roiTH, 50,255, cv2.THRESH_BINARY)
-                roiTH = cv2.erode(roiTH, erodeK, iterations=1)
+                if result is not None and roi is not None :
+                    textY = int(result.shape[0] - 30)
+                    textX = int(result.shape[1] / 3)
 
-                roiOCR = Image.fromarray(roiTH)
-                text = pytesseract.image_to_string(roiOCR, config=config)
-
-                print(text)
-                cv2.putText(result, text, (textX, textY), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
-                
-                cv2.imshow('roi', roiTH)
-                cv2.imshow('result', result)
+                    preOCR = preProcessToOCR(roi)
+                    '''
+                    text = findCharacter(preOCR)
+                    cv2.putText(result, text, (textX, textY), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
+                    '''
+                    cv2.imshow('roi', preOCR)
+                    cv2.imshow('result', result)
 
         cv2.imshow('origin', frame)
         
         if cv2.waitKey(30) & 0xff == 27 :
             break
 
-def signDetectVideo(video) :
-    while True :
-        if(video.get(cv2.CAP_PROP_POS_FRAMES) == video.get(cv2.CAP_PROP_FRAME_COUNT)) :
-            video.open("./road.mp4")
-
-        s, frame = video.read()
-        frame = cv2.resize(frame, (1280,720))
-        
-        found = findTemplate(frame, template)
-        
-        if(found > 0) :
-            frame, canny = contourTracking(frame)
-            cv2.imshow('result', frame)
-            cv2.imshow('canny', canny)
-        else :
-            cv2.imshow('result', frame)
-        
-        if cv2.waitKey(int(video.get(cv2.CAP_PROP_FPS))) & 0xff == 27 :
-            break
-
 cam = cv2.VideoCapture(0)
-vid = cv2.VideoCapture('./road.mp4')
 if cam.isOpened() :
     cam.set(3, 640)
     cam.set(4, 480)
@@ -144,11 +148,6 @@ if cam.isOpened() :
         signDetectCamera(cam)
     finally :
         cam.release()
-        
-elif vid.isOpened() :
-    signDetectVideo(vid)
-
-    vid.release()
 else :
     print("NoVideo")
 
