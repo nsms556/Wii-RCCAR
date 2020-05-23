@@ -9,7 +9,7 @@ import re
 pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR\\tesseract.exe'
 config = ('-l eng --oem 1 --psm 3')
 
-template = cv2.imread('./object.png')
+template = cv2.imread('./Object.png')
 erodeK = np.ones((3,3), np.uint8)
 
 def findTemplate(frame, template) :
@@ -50,9 +50,12 @@ def contourTracking(frame) :
     contYuv = cv2.cvtColor(contBlur, cv2.COLOR_BGR2YUV)
     _ , _ , contV = cv2.split(contYuv)
     
-    cannyV = cv2.Canny(contV, 50, 200, apertureSize=3)
+    cannyV = cv2.Canny(contV, 50, 255, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
+    cv2.imshow('splitV', contV)
+    cv2.imshow('canny', cannyV)
+
     if len(contoursV) != 0 :
         squareList = []
         areaList = []
