@@ -11,6 +11,18 @@ config = ('-l eng --oem 1 --psm 3')
 
 template = cv2.imread('./Object.png')
 erodeK = np.ones((3,3), np.uint8)
+capSecond = 2
+delayTime = 40
+capPeriod = 1000 / delayTime * capSecond
+objNum = 0
+
+def objNumIncrement() :
+    global objNum
+
+    objNum += 1
+
+    if objNum > 9 :
+        objNum = 0
 
 def findTemplate(frame, template) :
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
@@ -67,8 +79,6 @@ def contourTracking(frame) :
 
     cannyV = cv2.Canny(contV, low, high, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    cv2.imshow('c', cannyV)
 
     if len(contoursV) != 0 :
         squareList = []
@@ -102,17 +112,22 @@ def preProcessToOCR(roi) :
     _ , roi = cv2.threshold(roi, 50,255, cv2.THRESH_BINARY)
     roi = cv2.erode(roi, erodeK, iterations=1)
 
+    objWriteName = './ObjDetect/obj' + str(objNum) + '.jpg'
+    cv2.imwrite(objWriteName, roi)
+
     return roi
 
 def findCharacter(ocrImage) :
-    roiOCR = Image.fromarray(ocrImage)
-    text = pytesseract.image_to_string(roiOCR, config=config)
+    objReadName = './ObjDetect/obj' + str(objNum) + '.jpg'
+    roiOCR = Image.open(objReadName)
+    objNumIncrement()
 
-    print(text)
+    text = pytesseract.image_to_string(roiOCR, config=config)
 
     return text
    
 def signDetectCamera(video) :
+    capTime = 81
     while True :
         s, frame = video.read()
         
@@ -121,23 +136,22 @@ def signDetectCamera(video) :
         if contourRoi is not None :
             if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
                 result, roi = findTemplate(contourRoi, template)
-
-                if result is not None and roi is not None :
-                    textY = int(result.shape[0] - 30)
-                    textX = int(result.shape[1] / 3)
-
+            
+                if result is not None and roi is not None and capTime > 80 :
+                    capTime = 0
                     preOCR = preProcessToOCR(roi)
-                    '''
+                    
                     text = findCharacter(preOCR)
-                    cv2.putText(result, text, (textX, textY), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
-                    '''
+                    cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
+                    
                     cv2.imshow('roi', preOCR)
                     cv2.imshow('result', result)
 
         cv2.imshow('origin', frame)
         
-        if cv2.waitKey(30) & 0xff == 27 :
+        if cv2.waitKey(delayTime) & 0xff == 27 :
             break
+        capTime += 1
 
 cam = cv2.VideoCapture(0)
 if cam.isOpened() :
@@ -148,7 +162,6 @@ if cam.isOpened() :
         signDetectCamera(cam)
     finally :
         cam.release()
+        cv2.destroyAllWindows()
 else :
     print("NoVideo")
-
-cv2.destroyAllWindows()
