@@ -16,6 +16,34 @@ delayTime = 40
 capPeriod = 1000 / delayTime * capSecond
 objNum = 0
 
+#Need in Jetson
+def gstreamer_pipeline(
+    capture_width=800,
+    capture_height=450,
+    display_width=800,
+    display_height=450,
+    framerate=60,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc ! "
+        "video/x-raw(memory:NVMM), "
+        "width=(int)%d, height=(int)%d, "
+        "format=(string)NV12, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink"
+        % (
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
+
 def objNumIncrement() :
     global objNum
 
@@ -61,7 +89,7 @@ def findTemplate(frame, template) :
     return frame, roi
 
 def getCannyValue(frame, sigma = 0.23) :
-    median = np.median(frame)
+    median = np.median(frame) 
 
     lower = int(max(0, (1.0 - sigma) * median))
     upper = int(min(255, (1.0 + sigma) * median))
@@ -69,8 +97,12 @@ def getCannyValue(frame, sigma = 0.23) :
     return lower, upper
 
 def contourTracking(frame) :
-    cont = frame.copy()
+    contGPU = cv2.cuda_GpuMat(frame)
+    gaussianGPU = cv2.cuda.createGaussian 
+
     cont = cv2.GaussianBlur(cont, (5,5), 0)
+    
+    
     cont = cv2.cvtColor(cont, cv2.COLOR_BGR2YUV)
     _ , _ , contV = cv2.split(cont)
     
@@ -152,11 +184,10 @@ def signDetectCamera(video) :
             break
         capTime += 1
 
-cam = cv2.VideoCapture(0)
+#Need in Jetson
+cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+#cam = cv2.VideoCapture(0)
 if cam.isOpened() :
-    cam.set(3, 640)
-    cam.set(4, 480)
-
     try :
         signDetectCamera(cam)
     finally :
