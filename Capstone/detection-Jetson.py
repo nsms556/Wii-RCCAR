@@ -11,18 +11,21 @@ config = ('-l eng --oem 1 --psm 3')
 
 template = cv2.imread('./Object.png')
 erodeK = np.ones((3,3), np.uint8)
-capSecond = 2
 delayTime = 40
-capPeriod = 1000 / delayTime * capSecond
+capPeriod = 25
 objNum = 0
+
+tmGPU = cv2.cuda.createTemplateMatching(16, cv2.TM_CCOEFF_NORMED)
+gaussian5 = cv2.cuda.createGaussianFilter(16, 16, (5,5), 0)
+gaussian3 = cv2.cuda.createGaussianFilter(16, 16, (3,3), 0)
 
 #Need in Jetson
 def gstreamer_pipeline(
-    capture_width=800,
-    capture_height=450,
-    display_width=800,
-    display_height=450,
-    framerate=60,
+    capture_width=640,
+    capture_height=360,
+    display_width=640,
+    display_height=360,
+    framerate=30,
     flip_method=0,
 ):
     return (
@@ -55,11 +58,13 @@ def objNumIncrement() :
 def findTemplate(frame, template) :
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
     tplCanny = cv2.Canny(tplGray, 50, 200)
+    tplCannyGPU = cv2.cuda_GpuMat(tplCanny)
     tplH, tplW = tplCanny.shape[:2]
     
     frameGray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
     found = None
-
+    
     for scale in np.linspace(0.2, 1.0, 20)[::-1] :
         frameResized = imutils.resize(frameGray, width = int(frameGray.shape[1] * scale))
         r = frameGray.shape[1] / float(frameResized.shape[1])
@@ -68,8 +73,10 @@ def findTemplate(frame, template) :
             break
 
         frameCanny = cv2.Canny(frameResized, 50, 200)
-        result = cv2.matchTemplate(frameCanny, tplCanny, cv2.TM_CCOEFF_NORMED)
-
+        frameCannyGPU = cv2.cuda_GpuMat(frameCanny)
+        
+        resultGPU = tmGPU.match(frameCannyGPU, tplCannyGPU)
+        result = resultGPU.download()
         (_, Mval, _, Mloc) = cv2.minMaxLoc(result)
 
         if found is None or Mval > found[0] :
@@ -98,13 +105,10 @@ def getCannyValue(frame, sigma = 0.23) :
 
 def contourTracking(frame) :
     contGPU = cv2.cuda_GpuMat(frame)
-    gaussianGPU = cv2.cuda.createGaussian 
-
-    cont = cv2.GaussianBlur(cont, (5,5), 0)
-    
-    
-    cont = cv2.cvtColor(cont, cv2.COLOR_BGR2YUV)
-    _ , _ , contV = cv2.split(cont)
+    contFilterGPU = gaussian5.apply(contGPU)
+    contYuvGPU = cv2.cuda.cvtColor(contFilterGPU, cv2.COLOR_BGR2YUV)
+    _, _, vContGPU = cv2.cuda.split(contYuvGPU)
+    contV = vContGPU.download()
     
     low, high = getCannyValue(frame)
 
@@ -138,9 +142,11 @@ def contourTracking(frame) :
     return ret
 
 def preProcessToOCR(roi) :
-    roi = cv2.GaussianBlur(roi, (3,3), 0)
-    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    _ , roi = cv2.threshold(roi, 50,255, cv2.THRESH_BINARY)
+    roiGPU = cv2.cuda_GpuMat(roi)
+    roiFilterGPU = gaussian3.apply(roiGPU)
+    roiGrayGPU = cv2.cuda.cvtColor(roiFilterGPU, cv2.COLOR_BGR2GRAY)
+    _, roiTHGPU = cv2.cuda.threshold(roiGrayGPU, 50, 200, cv2.THRESH_BINARY)
+    roi = roiTHGPU.download()
     roi = cv2.erode(roi, erodeK, iterations=1)
 
     objWriteName = './ObjDetect/obj' + str(objNum) + '.jpg'
@@ -168,13 +174,13 @@ def signDetectCamera(video) :
             if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
                 result, roi = findTemplate(contourRoi, template)
             
-                if result is not None and roi is not None and capTime > 80 :
+                if result is not None and roi is not None and capTime > capPeriod :
                     capTime = 0
                     preOCR = preProcessToOCR(roi)
-                    '''
+                    
                     text = findCharacter(preOCR)
                     cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
-                    '''
+                    
                     cv2.imshow('roi', preOCR)
                     cv2.imshow('result', result)
 
@@ -186,7 +192,6 @@ def signDetectCamera(video) :
 
 #Need in Jetson
 cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-#cam = cv2.VideoCapture(0)
 if cam.isOpened() :
     try :
         signDetectCamera(cam)

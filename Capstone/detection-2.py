@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import imutils
 import pytesseract
+import time
 from PIL import Image
 import re
 
@@ -15,6 +16,33 @@ capSecond = 2
 delayTime = 40
 capPeriod = 1000 / delayTime * capSecond
 objNum = 0
+
+def gstreamer_pipeline(
+    capture_width=800,
+    capture_height=450,
+    display_width=800,
+    display_height=450,
+    framerate=60,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc ! "
+        "video/x-raw(memory:NVMM), "
+        "width=(int)%d, height=(int)%d, "
+        "format=(string)NV12, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink"
+        % (
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
 
 def objNumIncrement() :
     global objNum
@@ -129,20 +157,20 @@ def signDetectCamera(video) :
     capTime = 81
     while True :
         s, frame = video.read()
-        
+
         contourRoi = contourTracking(frame)
         
         if contourRoi is not None :
             if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
                 result, roi = findTemplate(contourRoi, template)
             
-                if result is not None and roi is not None and capTime > 80 :
+                if result is not None and roi is not None and capTime > capPeriod :
                     capTime = 0
                     preOCR = preProcessToOCR(roi)
-                    '''
+                    
                     text = findCharacter(preOCR)
                     cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
-                    '''
+                    
                     cv2.imshow('roi', preOCR)
                     cv2.imshow('result', result)
 
@@ -152,11 +180,8 @@ def signDetectCamera(video) :
             break
         capTime += 1
 
-cam = cv2.VideoCapture(0)
+cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 if cam.isOpened() :
-    cam.set(3, 640)
-    cam.set(4, 480)
-
     try :
         signDetectCamera(cam)
     finally :
