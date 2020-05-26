@@ -31,17 +31,25 @@ def gstreamer_pipeline(
 cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 
 if cam.isOpened() :
+    capTime = 31
     try :
         while True :
             ret, frame = cam.read()
-            '''
-            LaneModule.laneDeparture(frame)
-            '''
-            ObjectModule.findObject(frame)
+            f1 = frame.copy()
             
+            LaneModule.laneDeparture(f1)
+            
+            if capTime > 30 :
+                capTime = 0
+                ObjectModule.findObject(frame)
+
+            print(capTime)
             cv2.imshow('origin', frame)
+            capTime += 1
             if cv2.waitKey(30) & 0xff == 27 :
                 break
+    except Exception as e :
+        print(e)
     finally :
         cv2.destroyAllWindows()
         cam.release()

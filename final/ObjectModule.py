@@ -6,7 +6,7 @@ from PIL import Image
 import re
 
 config = ('-l eng --oem 1 --psm 3')
-template = cv2.imread('img/Object.png')
+template = cv2.imread('/home/gaonnuri/workspace/Wii-RCCAR/final/img/Object.png')
 erodeK = np.ones((3,3), np.uint8)
 capPeriod = 25
 objNum = 0
@@ -25,12 +25,15 @@ def objNumIncrement() :
         objNum = 0
 
 def findTemplate(frame, template) :
+    print('HERE')
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    print('HERE2')
     tplCanny = cv2.Canny(tplGray, 50, 200)
     tplCannyGPU = cv2.cuda_GpuMat(tplCanny)
     tplH, tplW = tplCanny.shape[:2]
     
     frameGray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
     
     found = None
     
@@ -118,13 +121,14 @@ def preProcessToOCR(roi) :
     roi = roiTHGPU.download()
     roi = cv2.erode(roi, erodeK, iterations=1)
 
-    objWriteName = './ObjDetect/obj' + str(objNum) + '.jpg'
+    objWriteName = '/home/gaonnuri/workspace/Wii-RCCAR/final/ObjDetect/obj' + str(objNum) + '.jpg'
+    
     cv2.imwrite(objWriteName, roi)
 
     return roi
 
 def findCharacter(ocrImage) :
-    objReadName = './ObjDetect/obj' + str(objNum) + '.jpg'
+    objReadName = '/home/gaonnuri/workspace/Wii-RCCAR/final/ObjDetect/obj' + str(objNum) + '.jpg'
     roiOCR = Image.open(objReadName)
     objNumIncrement()
 
@@ -134,19 +138,20 @@ def findCharacter(ocrImage) :
    
 def findObject(frame) :
     contourRoi = contourTracking(frame)
-        
+    
     if contourRoi is not None :
-        if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 and capTime > 50 :
-            capTime = 0
+        if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
             result, roi = findTemplate(contourRoi, template)
-            
+
             if result is not None and roi is not None :
                 preOCR = preProcessToOCR(roi)
-                
+                print('save')
+
                 text = findCharacter(preOCR)
+                print('ocr')
+                
                 cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
                 
                 cv2.imshow('roi', preOCR)
                 cv2.imshow('result', result)
-
-            capTime += 1
+                
