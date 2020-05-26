@@ -34,9 +34,9 @@ if cam.isOpened() :
     try :
         while True :
             ret, frame = cam.read()
-            
+            '''
             LaneModule.laneDeparture(frame)
-            
+            '''
             ObjectModule.findObject(frame)
             
             cv2.imshow('origin', frame)

@@ -5,15 +5,12 @@ import pytesseract
 from PIL import Image
 import re
 
-#pytesseract.pytesseract.tesseract_cmd = 'D:\School\Tesseract-OCR\\tesseract.exe'
-#pytesseract.pytesseract.tesseract_cmd = 'C:\Program Files\Tesseract-OCR\\tesseract.exe'
 config = ('-l eng --oem 1 --psm 3')
-
 template = cv2.imread('img/Object.png')
 erodeK = np.ones((3,3), np.uint8)
-delayTime = 40
 capPeriod = 25
 objNum = 0
+capTime = 51
 
 tmGPU = cv2.cuda.createTemplateMatching(16, cv2.TM_CCOEFF_NORMED)
 gaussian5 = cv2.cuda.createGaussianFilter(16, 16, (5,5), 0)
@@ -139,7 +136,8 @@ def findObject(frame) :
     contourRoi = contourTracking(frame)
         
     if contourRoi is not None :
-        if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 :
+        if contourRoi.shape[0] > 0 and contourRoi.shape[1] > 0 and capTime > 50 :
+            capTime = 0
             result, roi = findTemplate(contourRoi, template)
             
             if result is not None and roi is not None :
@@ -150,3 +148,5 @@ def findObject(frame) :
                 
                 cv2.imshow('roi', preOCR)
                 cv2.imshow('result', result)
+
+            capTime += 1
