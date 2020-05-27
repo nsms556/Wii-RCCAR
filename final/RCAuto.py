@@ -35,17 +35,17 @@ if cam.isOpened() :
     try :
         while True :
             ret, frame = cam.read()
-            f1 = frame.copy()
             
-            LaneModule.laneDeparture(f1)
+            LaneModule.laneDeparture(frame)
             
             if capTime > 30 :
                 capTime = 0
                 ObjectModule.findObject(frame)
-
-            print(capTime)
-            cv2.imshow('origin', frame)
             capTime += 1
+            print(capTime)
+            
+            cv2.imshow('origin', frame)
+            
             if cv2.waitKey(30) & 0xff == 27 :
                 break
     except Exception as e :

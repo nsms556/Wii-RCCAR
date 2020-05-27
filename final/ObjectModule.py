@@ -25,9 +25,7 @@ def objNumIncrement() :
         objNum = 0
 
 def findTemplate(frame, template) :
-    print('HERE')
     tplGray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
-    print('HERE2')
     tplCanny = cv2.Canny(tplGray, 50, 200)
     tplCannyGPU = cv2.cuda_GpuMat(tplCanny)
     tplH, tplW = tplCanny.shape[:2]
@@ -81,12 +79,12 @@ def contourTracking(frame) :
     contYuvGPU = cv2.cuda.cvtColor(contFilterGPU, cv2.COLOR_BGR2YUV)
     _, _, vContGPU = cv2.cuda.split(contYuvGPU)
     contV = vContGPU.download()
-    
+
     low, high = getCannyValue(frame)
 
     cannyV = cv2.Canny(contV, low, high, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    
     if len(contoursV) != 0 :
         squareList = []
         areaList = []
@@ -145,11 +143,8 @@ def findObject(frame) :
 
             if result is not None and roi is not None :
                 preOCR = preProcessToOCR(roi)
-                print('save')
 
                 text = findCharacter(preOCR)
-                print('ocr')
-                
                 cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
                 
                 cv2.imshow('roi', preOCR)
