@@ -1,8 +1,8 @@
 print('Wating For Module')
 
 import cv2
-import LaneModule
-import ObjectModule, WaveModule
+import LaneModule, ObjectModule
+#import WaveModule
 from time import sleep
 
 print('Waiting For Camera')
@@ -76,7 +76,7 @@ if cam.isOpened() :
             if capTime > 30 :
                 capTime = 0
                 textObject = ObjectModule.findObject(frame)
-            forDis = WaveModule.disMeasure()
+            #forDis = WaveModule.disMeasure()
             
             cv2.imshow('origin', frame)
 
@@ -91,7 +91,9 @@ if cam.isOpened() :
             
             printCarStatus(textObject, nowSpeed)
             nowSpeed = speedUp(nowSpeed, maxSpeed)
-            print('Forward Distance :', forDis)
+
+            #forDis = WaveModule.disMeasure()
+            #print('Forward Distance :', forDis)
             
             capTime += 1
             if cv2.waitKey(30) & 0xff == 27 :
