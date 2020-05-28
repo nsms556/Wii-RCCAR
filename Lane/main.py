@@ -2,33 +2,6 @@ import cv2
 import numpy as np
 import math
 
-def gstreamer_pipeline(
-    capture_width=640,
-    capture_height=360,
-    display_width=640,
-    display_height=360,
-    framerate=30,
-    flip_method=0,
-):
-    return (
-        "nvarguscamerasrc ! "
-        "video/x-raw(memory:NVMM), "
-        "width=(int)%d, height=(int)%d, "
-        "format=(string)NV12, framerate=(fraction)%d/1 ! "
-        "nvvidconv flip-method=%d ! "
-        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
-        "videoconvert ! "
-        "video/x-raw, format=(string)BGR ! appsink"
-        % (
-            capture_width,
-            capture_height,
-            framerate,
-            flip_method,
-            display_width,
-            display_height,
-        )
-    )
-
 def convert_to_HSV(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     return hsv
@@ -184,6 +157,7 @@ def display_heading_line(frame, steering_angle, line_color=(0, 0, 255), line_wid
 def laneTracking(capture) :
     while True:
         ret,frame = capture.read()
+        frame = cv2.flip(frame, -1)
     
         #Calling the functions
         hsv = convert_to_HSV(frame)
@@ -202,7 +176,7 @@ def laneTracking(capture) :
             break
 
 if __name__ == '__main__' :
-    video = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+    video = cv2.VideoCapture(0)
 
     if video.isOpened() :
         laneTracking(video)

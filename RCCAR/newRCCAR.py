@@ -168,8 +168,8 @@ def RCCon() :
         if(isQuit == 1) :
 	    setMotorSpeed(0)
 	    setServoSteer(120)
-	    setHeadLight(False)
-	    setBreakLight(False)
+	    setHeadLight(LED_OFF)
+	    setBreakLight(LED_OFF)
             wii_quit()
             break
 
