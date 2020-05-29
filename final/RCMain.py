@@ -33,6 +33,7 @@ def initRC() :
     GPIO.setup(BREAKLIGHT, GPIO.OUT)
     GPIO.setup(WAVE_TRIG, GPIO.OUT)
     GPIO.setup(WAVE_ECHO, GPIO.IN)
+    GPIO.setup(BACKLIGHT, GPIO.OUT)
 	
     servo = GPIO.PWM(SERVO, 50)
     dcMotor = GPIO.PWM(MOTOR_PWM, 100)
@@ -41,6 +42,7 @@ def initRC() :
     dcMotor.start(0)
     
     GPIO.output(WAVE_TRIG, False)
+
     
 def distanceCM(duration) :
     return (duration / 2) / 29.1
@@ -54,40 +56,44 @@ def disMeasure() :
     GPIO.output(WAVE_TRIG, False)
     
     timeout = time()
-    while GPIO.input(WAVE_ECHO) == 0 :
-        pulse_start = time()
-	if pulse_start != None :
-	    if((pulse_start - timeout) * 1000000) >= WAVE_MAX_DURATION :
+    try :
+	while GPIO.input(WAVE_ECHO) == 0 :
+	    pulse_start = time()
+	    if pulse_start != None :
+		if((pulse_start - timeout) * 1000000) >= WAVE_MAX_DURATION :
+		    dis = -1
+		    break
+	    else :
 		dis = -1
 		break
-	else :
-	    dis = -1
-	    break
     
-    if dis == -1 :
-        return dis
+	if dis == -1 :
+	    return dis
     
-    timeout = time()
-    while GPIO.input(WAVE_ECHO) == 1 :
-        pulse_end = time()
-	if pulse_end != None :
-	    if((pulse_end - pulse_start) * 1000000) >= WAVE_MAX_DURATION :
+	timeout = time()
+	while GPIO.input(WAVE_ECHO) == 1 :
+	    pulse_end = time()
+	    if pulse_end != None :
+		if((pulse_end - pulse_start) * 1000000) >= WAVE_MAX_DURATION :
+		    dis = -1
+		    break
+	    else :
 		dis = -1
 		break
-	else :
-	    dis = -1
-	    break
             
-    if dis == -1 :
-        return dis
+	if dis == -1 :
+	    return dis
     
-    if pulse_start != None and pulse_end != None :
-	pulse_duration = (pulse_end - pulse_start) * 1000000
-	dis = distanceCM(pulse_duration)
-	dis = round(dis, 2)
-    else :
+	if pulse_start != None and pulse_end != None :
+	    pulse_duration = (pulse_end - pulse_start) * 1000000
+	    dis = distanceCM(pulse_duration)
+	    dis = round(dis, 2)
+	else :
+	    dis = -1
+    except Exception as e :
 	dis = -1
-    
+	return dis
+	
     return dis
     
 def valConvert(inVal) :
@@ -240,6 +246,12 @@ def setBreakLight(status) :
         GPIO.output(BREAKLIGHT, True)
     else :
         GPIO.output(BREAKLIGHT, False)
+
+def setBackLight(status) :
+    if(status == LED_ON) :
+        GPIO.output(BACKLIGHT, True)
+    else :
+        GPIO.output(BACKLIGHT, False)
 	
 def setMotorForward() :
     GPIO.output(MOTOR_DIR, True)
@@ -254,7 +266,6 @@ def setServoSteer(steer) :
     servo.ChangeDutyCycle(valConvert(steer))
 
 def RCCon() :
-
     speed = 0
     headlight = LED_OFF
     timeHL = time()
@@ -262,7 +273,8 @@ def RCCon() :
     breaklight = LED_ON
     cruise = CRUISE_OFF
     backDistance = 0
-
+    setBackLight(LED_ON)
+    
     while True :
         shift = setShift()		    
         steer = setSteer()
@@ -276,6 +288,7 @@ def RCCon() :
             setServoSteer(120)
             setHeadLight(LED_OFF)
             setBreakLight(LED_OFF)
+	    setBackLight(LED_OFF)
             wii_quit()
 	    GPIO.cleanup()
             break
