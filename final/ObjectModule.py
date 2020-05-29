@@ -84,6 +84,9 @@ def contourTracking(frame) :
 
     cannyV = cv2.Canny(contV, low, high, apertureSize=3)
     contoursV, _ = cv2.findContours(cannyV, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    cv2.imshow('a', contV)
+    cv2.imshow('b', cannyV)
     
     if len(contoursV) != 0 :
         squareList = []
@@ -115,7 +118,7 @@ def preProcessToOCR(roi) :
     roiGPU = cv2.cuda_GpuMat(roi)
     roiFilterGPU = gaussian3.apply(roiGPU)
     roiGrayGPU = cv2.cuda.cvtColor(roiFilterGPU, cv2.COLOR_BGR2GRAY)
-    _, roiTHGPU = cv2.cuda.threshold(roiGrayGPU, 50, 200, cv2.THRESH_BINARY)
+    _, roiTHGPU = cv2.cuda.threshold(roiGrayGPU, 75, 255, cv2.THRESH_BINARY)
     roi = roiTHGPU.download()
     roi = cv2.erode(roi, erodeK, iterations=1)
 
@@ -145,8 +148,11 @@ def findObject(frame) :
                 preOCR = preProcessToOCR(roi)
 
                 text = findCharacter(preOCR)
+                text = text.upper()
+                text = text.replace(' ', '')
                 cv2.putText(result, text, (0, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,127,127), 3)
                 
                 cv2.imshow('roi', preOCR)
                 cv2.imshow('result', result)
-                
+
+                return text
